@@ -548,10 +548,11 @@ func (c *Context) trace(node *Node) (err error) { //nolint: gocyclo
 				case strings.HasPrefix(v, "-"):
 					c.scan.Pop()
 					// Note: tokens must be pushed in reverse order.
-					if tail := v[2:]; tail != "" {
+					_, size := utf8.DecodeRuneInString(v[1:])
+					if tail := v[1+size:]; tail != "" {
 						c.scan.PushTyped(tail, ShortFlagTailToken)
 					}
-					c.scan.PushTyped(v[1:2], ShortFlagToken)
+					c.scan.PushTyped(v[1:1+size], ShortFlagToken)
 				}
 			default:
 				c.scan.Pop()
@@ -561,10 +562,12 @@ func (c *Context) trace(node *Node) (err error) { //nolint: gocyclo
 		case ShortFlagTailToken:
 			c.scan.Pop()
 			// Note: tokens must be pushed in reverse order.
-			if tail := token.String()[1:]; tail != "" {
+			s := token.String()
+			_, size := utf8.DecodeRuneInString(s)
+			if tail := s[size:]; tail != "" {
 				c.scan.PushTyped(tail, ShortFlagTailToken)
 			}
-			c.scan.PushTyped(token.String()[0:1], ShortFlagToken)
+			c.scan.PushTyped(s[:size], ShortFlagToken)
 
 		case FlagToken:
 			if err := c.parseFlag(flags, token.String()); err != nil {

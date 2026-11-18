@@ -3371,3 +3371,48 @@ func TestParseHyphenParameter(t *testing.T) {
 		assert.Equal(t, &shortFlag{Numeric: -10}, actual)
 	})
 }
+
+func TestUTF8ShortFlags(t *testing.T) {
+	type cli struct {
+		Micro   bool   `short:"µ"`
+		Verbose bool   `short:"v"`
+		Lambda  bool   `aliases:"λ"`
+		Omega   string `short:"Ω"`
+	}
+
+	t.Run("StandaloneShortRune", func(t *testing.T) {
+		actual := &cli{}
+		_, err := mustNew(t, actual).Parse([]string{"-µ"})
+		assert.NoError(t, err)
+		assert.True(t, actual.Micro)
+	})
+
+	t.Run("SingleRuneAlias", func(t *testing.T) {
+		actual := &cli{}
+		_, err := mustNew(t, actual).Parse([]string{"-λ"})
+		assert.NoError(t, err)
+		assert.True(t, actual.Lambda)
+	})
+
+	t.Run("BundledShortRunes", func(t *testing.T) {
+		actual := &cli{}
+		_, err := mustNew(t, actual).Parse([]string{"-vµλ"})
+		assert.NoError(t, err)
+		assert.True(t, actual.Verbose)
+		assert.True(t, actual.Micro)
+		assert.True(t, actual.Lambda)
+	})
+
+	t.Run("ShortRuneWithAttachedValue", func(t *testing.T) {
+		actual := &cli{}
+		_, err := mustNew(t, actual).Parse([]string{"-Ωohm"})
+		assert.NoError(t, err)
+		assert.Equal(t, "ohm", actual.Omega)
+	})
+
+	t.Run("UnknownShortRuneError", func(t *testing.T) {
+		actual := &cli{}
+		_, err := mustNew(t, actual).Parse([]string{"-ä"})
+		assert.EqualError(t, err, `unknown flag -ä, did you mean one of "-h", "-µ", "-v", "-λ", "-Ω"?`)
+	})
+}
